@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { from_base64, base64_variants, to_base64, compare } from 'libsodium-wrappers-sumo';
 
 import { PasetoError } from './error/PasetoError';
@@ -9,6 +10,70 @@ export function constantTimeCompare(a: Buffer, b: Buffer) {
   }
 
   return compare(a, b) === 0;
+}
+
+export function hkdf(alg: string) {
+  let olen: crypto.Hmac;
+  try {
+    olen = crypto.createHmac(alg, '');
+  } catch (ex) {
+    throw new Error('Unable to configure HKDF.');
+  }
+
+  /***
+   * `lambda`
+   *
+   * execute an hkdf
+   *
+   * @function
+   * @api private
+   *
+   * @param {Buffer} key
+   * @param {Buffer} salt
+   * @param {Number} len
+   * @param {String} use
+   * @param {Function} done
+   * @returns {Buffer}
+   */
+  return async (key: Buffer, salt: Buffer, len: number, use: string) => {
+    if (!len || len < 0 || len > 255 * ((olen as any) as number)) {
+      throw new Error('Bad output length requested of HKDF.');
+    }
+
+    // if salt not provided, set it to a string of zeroes.
+    if (!salt) {
+      salt = Buffer.alloc((olen as any) as number).fill(0);
+    }
+
+    const prk = crypto
+      .createHmac(alg, salt)
+      .update(key)
+      .digest();
+
+    if (Buffer.byteLength(prk) < ((olen as any) as number)) {
+      throw new Error('An unexpected condition occurred in the HKDF internals');
+    }
+
+    const u = Buffer.from(use);
+
+    let t = Buffer.from('');
+    let lb = Buffer.from('');
+    let i: Buffer, inp;
+
+    for (let bi = 1; Buffer.byteLength(t) < len; ++((i as any) as number)) {
+      i = Buffer.from(String.fromCharCode(bi));
+      inp = Buffer.concat([lb, u, i]);
+
+      lb = crypto
+        .createHmac(alg, prk)
+        .update(inp)
+        .digest();
+      t = Buffer.concat([t, lb]);
+    }
+
+    const orm = Buffer.from(t).slice(0, len);
+    return orm;
+  };
 }
 
 export const parse = (format: 'hex' | 'base64' | 'utf-8') => (...args: (string | Buffer)[]) => {

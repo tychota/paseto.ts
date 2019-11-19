@@ -4,6 +4,10 @@ import { AbstractKey } from './abstract';
 
 import { Protocol } from '../protocol/interface';
 import { V2 } from '../protocol/V2';
+import { hkdf } from 'utils';
+
+const INFO_ENCRYPTION = 'paseto-encryption-key';
+const INFO_AUTHENTICATION = 'paseto-auth-key-for-aead';
 
 export class SymmetricKey extends AbstractKey {
   /***
@@ -29,7 +33,7 @@ export class SymmetricKey extends AbstractKey {
     if (!(rawKey instanceof Buffer)) {
       throw new TypeError('Raw key must be provided as a buffer');
     }
-    this._keyBuffer = rawKey;
+    this._key = rawKey;
     return;
   }
 
@@ -47,6 +51,15 @@ export class SymmetricKey extends AbstractKey {
     await this.ready;
     await this.inject(Buffer.from(randombytes_buf(this.protocol.symmetricKeyLength)));
     return this;
+  }
+
+  public async split(salt: Buffer) {
+    const hkdfFn = hkdf('sha384');
+
+    const encryptionKey = await hkdfFn(this._key as Buffer, salt, 32, INFO_ENCRYPTION);
+    const authenticationKey = await hkdfFn(this._key as Buffer, salt, 32, INFO_AUTHENTICATION);
+
+    return [encryptionKey, authenticationKey];
   }
 }
 

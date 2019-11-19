@@ -142,7 +142,7 @@ export class V2 implements Protocol {
 
     // encrypt
     const additionnalData = encodeAdditionalData(header, nonce, footer);
-    const ciphertext = Buffer.from(crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, additionnalData, null, nonce, key.raw));
+    const ciphertext = Buffer.from(crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, additionnalData, null, nonce, key.raw as Buffer));
 
     // format
     const payload = Buffer.concat([nonce, ciphertext]);
@@ -199,7 +199,7 @@ export class V2 implements Protocol {
     // decrypt and verify
     const additionnalData = encodeAdditionalData(header, nonce, footer);
     const ciphertext = Buffer.from(payload).slice(nonceLength, payloadLength);
-    const plaintext = Buffer.from(crypto_aead_xchacha20poly1305_ietf_decrypt(null, ciphertext, additionnalData, nonce, key.raw));
+    const plaintext = Buffer.from(crypto_aead_xchacha20poly1305_ietf_decrypt(null, ciphertext, additionnalData, nonce, key.raw as Buffer));
 
     // format
     return plaintext.toString('utf-8');
@@ -230,7 +230,7 @@ export class V2 implements Protocol {
 
     // sign
     const payload = encodeAdditionalData(this.headerPublic, parsedData, parsedFooter);
-    const signature = Buffer.from(crypto_sign_detached(payload, key.raw));
+    const signature = Buffer.from(crypto_sign_detached(payload, key.raw as Buffer));
 
     // format
     const token = `${this.headerPublic.toString('utf-8')}${toBase64URLSafe(Buffer.concat([parsedData, signature]))}`;
@@ -266,7 +266,7 @@ export class V2 implements Protocol {
 
     // verify signature
     const expected = encodeAdditionalData(parsedHeader, data, parsedFooter);
-    const valid = crypto_sign_verify_detached(signature, expected, key.raw);
+    const valid = crypto_sign_verify_detached(signature, expected, key.raw as Buffer);
 
     if (!valid) {
       throw new PasetoError('Invalid signature for this message');

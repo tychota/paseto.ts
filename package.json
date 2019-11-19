@@ -29,14 +29,15 @@
   },
   "devDependencies": {
     "@types/jest": "^24.0.23",
+    "@types/libsodium-wrappers-sumo": "^0.7.3",
     "husky": "^3.1.0",
     "tsdx": "^0.11.0",
     "tslib": "^1.10.0",
     "typescript": "^3.7.2"
   },
   "dependencies": {
-    "@types/libsodium-wrappers-sumo": "^0.7.7",
     "libsodium-wrappers-sumo": "^0.7.6",
+    "nan": "^2.14.0",
     "prettier": "^1.19.1"
   }
 }

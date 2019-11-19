@@ -2,7 +2,7 @@ import { Protocol } from 'protocol/interface';
 import { ready, base64_variants, from_base64, to_base64 } from 'libsodium-wrappers-sumo';
 
 export abstract class AbstractKey {
-  protected _keyBuffer!: Buffer;
+  protected _key!: Buffer | string;
   constructor(protected readonly _protocol: Protocol) {}
 
   public get protocol() {
@@ -12,7 +12,7 @@ export abstract class AbstractKey {
     return ready;
   }
 
-  public abstract async inject(rawKey: Buffer): Promise<void>;
+  public abstract async inject(rawKey: Buffer | string): Promise<void>;
 
   /***
    * base64
@@ -64,10 +64,10 @@ export abstract class AbstractKey {
    * @returns {String}
    */
   public encode(): string {
-    if (!(this._keyBuffer instanceof Buffer)) {
+    if (!(this._key instanceof Buffer)) {
       throw new TypeError('Can only encode buffer');
     }
-    return to_base64(this._keyBuffer, base64_variants.URLSAFE_NO_PADDING);
+    return to_base64(this._key, base64_variants.URLSAFE_NO_PADDING);
   }
 
   /***
@@ -80,7 +80,7 @@ export abstract class AbstractKey {
    *
    * @returns {Buffer}
    */
-  public get raw(): Buffer {
-    return this._keyBuffer;
+  public get raw(): Buffer | string {
+    return this._key;
   }
 }
