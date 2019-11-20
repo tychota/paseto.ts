@@ -7,10 +7,6 @@ RSAPublicKeyExtractWorker::~RSAPublicKeyExtractWorker() {}
 void RSAPublicKeyExtractWorker::Execute()
 {
     this->public_key = extract_rsa_public_key(private_key);
-    if (this->public_key == nullptr)
-    {
-        SetErrorMessage("Unable to generate key");
-    }
 }
 
 void RSAPublicKeyExtractWorker::HandleOKCallback()
@@ -23,8 +19,6 @@ void RSAPublicKeyExtractWorker::HandleOKCallback()
     promise->Resolve(GetCurrentContext(), New(this->public_key).ToLocalChecked());
 #pragma clang diagnostic pop
     v8::Isolate::GetCurrent()->RunMicrotasks();
-
-    free(public_key);
 }
 
 void RSAPublicKeyExtractWorker::HandleErrorCallback()
@@ -37,15 +31,13 @@ void RSAPublicKeyExtractWorker::HandleErrorCallback()
     promise->Reject(GetCurrentContext(), New(this->ErrorMessage()).ToLocalChecked());
 #pragma clang diagnostic pop
     v8::Isolate::GetCurrent()->RunMicrotasks();
-
-    free(public_key);
 }
 
 NAN_METHOD(ExtractRsaPublicKey)
 {
     auto private_key_string = To<String>(info[0]).ToLocalChecked();
     Nan::Utf8String private_key_utf8(private_key_string);
-    char *private_key(*private_key_utf8);
+    std::string private_key(*private_key_utf8);
 
     auto worker = new RSAPublicKeyExtractWorker(private_key);
     auto resolver = v8::Promise::Resolver::New(Nan::GetCurrentContext()).ToLocalChecked();

@@ -7,4 +7,4 @@
 #include <openssl/bio.h>
 #include <openssl/bn.h>
 
-char *extract_rsa_public_key(std::string private_key);
+std::string extract_rsa_public_key(const std::string &private_key);

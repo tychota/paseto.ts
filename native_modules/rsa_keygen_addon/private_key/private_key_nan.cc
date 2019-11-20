@@ -7,10 +7,6 @@ RSAPrivateKeyGenWorker::~RSAPrivateKeyGenWorker() {}
 void RSAPrivateKeyGenWorker::Execute()
 {
     this->private_key = generate_rsa_private_key();
-    if (this->private_key == nullptr)
-    {
-        SetErrorMessage("Unable to generate key");
-    }
 }
 
 void RSAPrivateKeyGenWorker::HandleOKCallback()
@@ -23,8 +19,6 @@ void RSAPrivateKeyGenWorker::HandleOKCallback()
     promise->Resolve(GetCurrentContext(), New(this->private_key).ToLocalChecked());
 #pragma clang diagnostic pop
     v8::Isolate::GetCurrent()->RunMicrotasks();
-
-    free(private_key);
 }
 
 void RSAPrivateKeyGenWorker::HandleErrorCallback()
@@ -37,8 +31,6 @@ void RSAPrivateKeyGenWorker::HandleErrorCallback()
     promise->Reject(GetCurrentContext(), New(this->ErrorMessage()).ToLocalChecked());
 #pragma clang diagnostic pop
     v8::Isolate::GetCurrent()->RunMicrotasks();
-
-    free(private_key);
 }
 
 NAN_METHOD(GenerateRsaPrivateKey)

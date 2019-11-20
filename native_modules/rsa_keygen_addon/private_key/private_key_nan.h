@@ -25,7 +25,7 @@ public:
     void HandleErrorCallback();
 
 private:
-    char *private_key;
+    std::string private_key;
 };
 
 NAN_METHOD(GenerateRsaPrivateKey);

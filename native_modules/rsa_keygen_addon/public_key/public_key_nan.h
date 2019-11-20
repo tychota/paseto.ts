@@ -26,7 +26,7 @@ public:
 
 private:
     std::string private_key;
-    char *public_key;
+    std::string public_key;
 };
 
 NAN_METHOD(ExtractRsaPublicKey);
