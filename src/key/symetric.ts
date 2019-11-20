@@ -3,13 +3,30 @@ import { randombytes_buf } from 'libsodium-wrappers-sumo';
 import { AbstractKey } from './abstract';
 
 import { Protocol } from '../protocol/interface';
+import { V1 } from '../protocol/V1';
 import { V2 } from '../protocol/V2';
-import { hkdf } from 'utils';
+
+import { hkdf } from '../utils';
 
 const INFO_ENCRYPTION = 'paseto-encryption-key';
 const INFO_AUTHENTICATION = 'paseto-auth-key-for-aead';
 
 export class SymmetricKey extends AbstractKey {
+  /***
+   * V1
+   *
+   * syntactic sugar for constructor forcing use of protocol V1
+   *
+   * @deprecated
+   * @function
+   * @api public
+   *
+   * @returns {SymmetricKey}
+   */
+  static V1Deprecated(): SymmetricKey {
+    return new SymmetricKey(new V1());
+  }
+
   /***
    * V2
    *
@@ -60,6 +77,26 @@ export class SymmetricKey extends AbstractKey {
     const authenticationKey = await hkdfFn(this._key as Buffer, salt, 32, INFO_AUTHENTICATION);
 
     return [encryptionKey, authenticationKey];
+  }
+}
+
+/***
+ * SymmetricKeyV1
+ *
+ * subclass forcing use of V1
+ *
+ * @deprecated
+ * @constructor
+ * @api public
+ */
+export { SymmetricKeyV1 as V1Deprecated };
+
+/**
+ * @deprecated
+ */
+class SymmetricKeyV1 extends SymmetricKey {
+  constructor() {
+    super(new V1());
   }
 }
 

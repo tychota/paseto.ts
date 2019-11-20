@@ -9,6 +9,16 @@ export function constantTimeCompare(a: Buffer, b: Buffer) {
     throw new TypeError('Inputs must be buffers');
   }
 
+  if (Buffer.byteLength(a) !== Buffer.byteLength(b)) {
+    throw new TypeError('Buffers must have the same length');
+  }
+
+  // default to node implementation
+  if (crypto.timingSafeEqual) {
+    return crypto.timingSafeEqual(a, b);
+  }
+
+  // fallback to libsodium
   return compare(a, b) === 0;
 }
 

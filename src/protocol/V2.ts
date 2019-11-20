@@ -3,8 +3,8 @@ import {
   crypto_aead_xchacha20poly1305_ietf_NPUBBYTES,
   crypto_aead_xchacha20poly1305_ietf_encrypt,
   crypto_aead_xchacha20poly1305_ietf_decrypt,
-  crypto_sign_detached,
   crypto_sign_BYTES,
+  crypto_sign_detached,
   crypto_sign_verify_detached,
   randombytes_buf,
   ready,
@@ -97,10 +97,10 @@ export class V2 implements Protocol {
   /***
    * encrypt
    *
-   * symmetric authenticated encryption
+   * symmetric authenticated encryption (public api)
    *
    * @function
-   * @api private
+   * @api public
    *
    * @param {String|Buffer} data
    * @param {Object} key
@@ -108,14 +108,32 @@ export class V2 implements Protocol {
    * @returns {Promise}
    */
   public async encrypt(data: string | Buffer, key: SymmetricKey, footer: string | Buffer = ''): Promise<string> {
+    return this.encryptWithNonce(data, key, footer, '');
+  }
+
+  /***
+   * encryptWithNonce
+   *
+   * symmetric authenticated encryption (private api)
+   *
+   * this private API is used for vector testing
+   *
+   * @function
+   * @api private
+   *
+   * @param {String|Buffer} data
+   * @param {Object} key
+   * @param {String|Buffer} footer
+   * @param {String|Buffer} nonce
+   * @returns {Promise}
+   */
+  private async encryptWithNonce(data: string | Buffer, key: SymmetricKey, footer: string | Buffer = '', nonce: string): Promise<string> {
     if (!(key.protocol instanceof V2)) {
       throw new InvalidVersionError('The given key is not intended for this version of PASETO.');
     }
     await this.ready;
 
-    let nonce = '';
     const [parsedData, parsedFooter, parsedNonce] = parse('utf-8')(data, footer, nonce);
-
     return this.aeadEncrypt(key, this.headerLocal, parsedData, parsedFooter, parsedNonce);
   }
 

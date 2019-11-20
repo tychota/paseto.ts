@@ -1,27 +1,28 @@
-import { V2, V1Deprecated, SymmetricKey, PrivateKey, PublicKey } from '../src';
+import sodium from 'libsodium-wrappers-sumo';
 
-import { randombytes_buf, crypto_sign_keypair } from 'libsodium-wrappers-sumo';
+import { V1Deprecated, V2, SymmetricKey, PrivateKey, PublicKey } from '../src/';
+import { extractRsaPublicKey, generateRsaPrivateKey } from '../native_modules/rsa_keygen_addon';
 
-describe('Protocol V2', () => {
-  const v2 = new V2();
+describe('Protocol v1', () => {
+  const v1 = new V1Deprecated();
 
   describe('keygen', () => {
     it('should generate a symmetric key', async () => {
       // when
-      const symmetricKey = await v2.symmetric();
+      const symmetricKey = await v1.symmetric();
 
       // then
-      expect(symmetricKey).toBeInstanceOf(SymmetricKey);
-      expect(v2.symmetricKeyLength).toEqual(Buffer.byteLength(symmetricKey.raw));
+      expect(symmetricKey instanceof SymmetricKey).toBeTruthy();
+      expect(v1.symmetricKeyLength).toBe(Buffer.byteLength(symmetricKey.raw));
     });
 
     it('should generate a private key', async () => {
       // when
-      const privateKey = await v2.private();
+      const privateKey = await v1.private();
 
       // then
-      expect(privateKey).toBeInstanceOf(PrivateKey);
-      expect(64).toEqual(Buffer.byteLength(privateKey.raw));
+      expect(privateKey instanceof PrivateKey).toBeTruthy();
+      expect('-----BEGIN RSA PRIVATE KEY-----').toBe(privateKey.raw.slice(0, 31));
     });
   });
 
@@ -31,9 +32,9 @@ describe('Protocol V2', () => {
     beforeEach(async () => {
       footer = 'footer';
 
-      const rawKey = Buffer.from(randombytes_buf(32));
+      const rawKey = Buffer.from(sodium.randombytes_buf(32));
 
-      key = SymmetricKey.V2();
+      key = SymmetricKey.V1Deprecated();
       await key.inject(rawKey);
     });
 
@@ -44,30 +45,34 @@ describe('Protocol V2', () => {
 
       it('should encrypt and decrypt successfully', async () => {
         // when
-        const token = await v2.encrypt(message, key, '');
+        const token = await v1.encrypt(message, key, '');
+
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 9)).toBe('v2.local.');
+        expect(token.substring(0, 9)).toBe('v1.local.');
 
         // when
-        const data = await v2.decrypt(token, key, '');
+        const data = await v1.decrypt(token, key, '');
+
         // then
         expect(typeof data).toBe('string');
-        expect(data).toEqual(message);
+        expect(data).toBe(message);
       });
 
       it('should encrypt and decrypt successfully with footer', async () => {
         // when
-        const token = await v2.encrypt(message, key, footer);
+        const token = await v1.encrypt(message, key, footer);
+
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 9)).toBe('v2.local.');
+        expect(token.substring(0, 9)).toBe('v1.local.');
 
         // when
-        const data = await v2.decrypt(token, key, footer);
+        const data = await v1.decrypt(token, key, footer);
+
         // then
         expect(typeof data).toBe('string');
-        expect(data).toEqual(message);
+        expect(data).toBe(message);
       });
     });
 
@@ -79,13 +84,15 @@ describe('Protocol V2', () => {
 
       it('should encrypt and decrypt successfully', async () => {
         // when
-        const token = await v2.encrypt(message, key, '');
+        const token = await v1.encrypt(message, key, '');
+
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 9)).toBe('v2.local.');
+        expect(token.substring(0, 9)).toBe('v1.local.');
 
         // when
-        const data = await v2.decrypt(token, key, '');
+        const data = await v1.decrypt(token, key, '');
+
         // then
         expect(typeof data).toBe('string');
         expect(data).toBe(message);
@@ -93,13 +100,15 @@ describe('Protocol V2', () => {
 
       it('should encrypt and decrypt successfully with footer', async () => {
         // when
-        const token = await v2.encrypt(message, key, footer);
+        const token = await v1.encrypt(message, key, footer);
+
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 9)).toBe('v2.local.');
+        expect(token.substring(0, 9)).toBe('v1.local.');
 
         // when
-        const data = await v2.decrypt(token, key, footer);
+        const data = await v1.decrypt(token, key, footer);
+
         // then
         expect(typeof data).toBe('string');
         expect(data).toBe(message);
@@ -107,7 +116,7 @@ describe('Protocol V2', () => {
     });
 
     describe('errors', () => {
-      const v1 = new V1Deprecated();
+      const v2 = new V2();
 
       it('should error on encryption with an invalid key version', async () => {
         // guard
@@ -115,7 +124,7 @@ describe('Protocol V2', () => {
 
         try {
           // when
-          await v1.encrypt('test', key, '');
+          await v2.encrypt('test', key, '');
         } catch (err) {
           // then
           expect(err.name).toBe('InvalidVersionError');
@@ -128,13 +137,13 @@ describe('Protocol V2', () => {
         expect.assertions(3);
 
         // when
-        const token = await v2.encrypt('test', key, '');
+        const token = await v1.encrypt('test', key, '');
         // then
         expect(token).toBeTruthy();
 
         try {
           // when
-          await v1.decrypt(token, key, '');
+          await v2.decrypt(token, key, '');
         } catch (err) {
           // then
           expect(err.name).toBe('InvalidVersionError');
@@ -150,15 +159,14 @@ describe('Protocol V2', () => {
     beforeEach(async () => {
       footer = 'footer';
 
-      const keypair = crypto_sign_keypair();
+      const rawSecretKey = await generateRsaPrivateKey();
+      const rawPublicKey = await extractRsaPublicKey(rawSecretKey);
 
-      secretKey = PrivateKey.V2();
-      // @ts-ignore
-      secretKey.inject(Buffer.from(keypair.privateKey, 'binary'));
+      secretKey = PrivateKey.V1Deprecated();
+      await secretKey.inject(rawSecretKey);
 
-      publicKey = PublicKey.V2();
-      // @ts-ignore
-      publicKey.inject(Buffer.from(keypair.publicKey, 'binary'));
+      publicKey = PublicKey.V1Deprecated();
+      await publicKey.inject(rawPublicKey);
     });
 
     describe('text', () => {
@@ -168,13 +176,13 @@ describe('Protocol V2', () => {
 
       it('should sign and verify successfully', async () => {
         // when
-        const token = await v2.sign(message, secretKey, '');
+        const token = await v1.sign(message, secretKey, '');
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 10)).toBe('v2.public.');
+        expect(token.substring(0, 10)).toBe('v1.public.');
 
         // when
-        const data = await v2.verify(token, publicKey, '');
+        const data = await v1.verify(token, publicKey, '');
         // then
         expect(typeof data).toBe('string');
         expect(data).toBe(message);
@@ -182,13 +190,13 @@ describe('Protocol V2', () => {
 
       it('should sign and verify successfully with footer', async () => {
         // when
-        const token = await v2.sign(message, secretKey, footer);
+        const token = await v1.sign(message, secretKey, footer);
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 10)).toBe('v2.public.');
+        expect(token.substring(0, 10)).toBe('v1.public.');
 
         // when
-        const data = await v2.verify(token, publicKey, footer);
+        const data = await v1.verify(token, publicKey, footer);
         // then
         expect(typeof data).toBe('string');
         expect(data).toBe(message);
@@ -203,13 +211,13 @@ describe('Protocol V2', () => {
 
       it('should sign and verify successfully', async () => {
         // when
-        const token = await v2.sign(message, secretKey, '');
+        const token = await v1.sign(message, secretKey, '');
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 10)).toBe('v2.public.');
+        expect(token.substring(0, 10)).toBe('v1.public.');
 
         // when
-        const data = await v2.verify(token, publicKey, '');
+        const data = await v1.verify(token, publicKey, '');
         // then
         expect(typeof data).toBe('string');
         expect(data).toBe(message);
@@ -217,13 +225,13 @@ describe('Protocol V2', () => {
 
       it('should sign and verify successfully with footer', async () => {
         // when
-        const token = await v2.sign(message, secretKey, footer);
+        const token = await v1.sign(message, secretKey, footer);
         // then
         expect(typeof token).toBe('string');
-        expect(token.substring(0, 10)).toBe('v2.public.');
+        expect(token.substring(0, 10)).toBe('v1.public.');
 
         // when
-        const data = await v2.verify(token, publicKey, footer);
+        const data = await v1.verify(token, publicKey, footer);
         // then
         expect(typeof data).toBe('string');
         expect(data).toBe(message);
@@ -231,17 +239,17 @@ describe('Protocol V2', () => {
     });
 
     describe('errors', () => {
-      const v1 = new V1Deprecated();
+      const v2 = new V2();
 
       it('should error on signing with an invalid key version', async () => {
         // guard
         expect.assertions(2);
 
         try {
-          // when
-          await v1.sign('test', secretKey, '');
+          //when
+          await v2.sign('test', secretKey, '');
         } catch (err) {
-          // then
+          //then
           expect(err.name).toBe('InvalidVersionError');
           expect(err.message).toBe('The given key is not intended for this version of PASETO.');
         }
@@ -251,13 +259,13 @@ describe('Protocol V2', () => {
         // guard
         expect.assertions(3);
         //when
-        const token = await v2.sign('test', secretKey, '');
+        const token = await v1.sign('test', secretKey, '');
         // then
         expect(token).toBeTruthy();
 
         try {
           // when
-          await v1.verify(token, publicKey, '');
+          await v2.verify(token, publicKey, '');
         } catch (err) {
           // then
           expect(err.name).toBe('InvalidVersionError');

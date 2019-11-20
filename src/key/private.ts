@@ -10,11 +10,11 @@ import {
 import { AbstractKey } from './abstract';
 import { PublicKey } from './public';
 
-import * as extcrypto from '../extcrypto';
+import { generateRsaPrivateKey, extractRsaPublicKey } from '../../native_modules/rsa_keygen_addon';
 
 import { Protocol } from '../protocol/interface';
-import { V2 } from '../protocol/V2';
 import { V1 } from '../protocol/V1';
+import { V2 } from '../protocol/V2';
 
 /***
  * PrivateKey
@@ -28,6 +28,21 @@ import { V1 } from '../protocol/V1';
  * @param {Object} protocol
  */
 export class PrivateKey extends AbstractKey {
+  /***
+   * V1
+   *
+   * syntactic sugar for constructor forcing use of protocol V1
+   *
+   * @deprecated
+   * @function
+   * @api public
+   *
+   * @returns {PrivateKey}
+   */
+  static V1Deprecated(): PrivateKey {
+    return new PrivateKey(new V1());
+  }
+
   /***
    * V2
    *
@@ -113,9 +128,10 @@ export class PrivateKey extends AbstractKey {
       await this.inject(Buffer.from(crypto_sign_keypair().privateKey));
       return this;
     }
-    if (this.protocol instanceof V2) {
+    if (this.protocol instanceof V1) {
       await this.ready;
-      await this.inject(extcrypto.keygen());
+      const privateKey = await generateRsaPrivateKey();
+      await this.inject(privateKey);
       return this;
     }
     throw new Error('Unimplemented');
@@ -135,11 +151,37 @@ export class PrivateKey extends AbstractKey {
     const pk = new PublicKey(this.protocol);
     if (this.protocol instanceof V2) {
       await this.ready;
-      const rawKey = Buffer.from(crypto_sign_ed25519_sk_to_pk(this.raw as Buffer));
-      pk.inject(rawKey);
+      const publicKey = Buffer.from(crypto_sign_ed25519_sk_to_pk(this.raw as Buffer));
+      pk.inject(publicKey);
+      return pk;
+    }
+    if (this.protocol instanceof V1) {
+      await this.ready;
+      const publicKey = await extractRsaPublicKey(this.raw as string);
+      pk.inject(publicKey);
       return pk;
     }
     throw new Error('Unimplemented');
+  }
+}
+
+/***
+ * PrivateKeyV1
+ *
+ * subclass forcing use of V2
+ *
+ * @deprecated
+ * @constructor
+ * @api public
+ */
+export { PrivateKeyV1 as V1Deprecated };
+
+/**
+ * @deprecated
+ */
+class PrivateKeyV1 extends PrivateKey {
+  constructor() {
+    super(new V1());
   }
 }
 
