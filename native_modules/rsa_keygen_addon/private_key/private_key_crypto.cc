@@ -3,22 +3,22 @@
 char *generate_rsa_private_key()
 {
     // begin keygen
-    BIGNUM *exponent = BN_new();
+    auto exponent = BN_new();
     BN_set_word(exponent, RSA_F4); // 65537
 
-    RSA *rsa = RSA_new();
-    int64_t key_generated = RSA_generate_key_ex(rsa, 2048, exponent, NULL);
+    auto rsa = RSA_new();
+    auto key_generated = RSA_generate_key_ex(rsa, 2048, exponent, NULL);
 
     if (!key_generated)
     {
         return nullptr;
     }
 
-    BIO *bio = BIO_new(BIO_s_mem());
+    auto bio = BIO_new(BIO_s_mem());
     PEM_write_bio_RSAPrivateKey(bio, rsa, NULL, NULL, 0, NULL, NULL);
 
-    uint64_t private_key_len = BIO_pending(bio);
-    char *private_key = (char *)calloc(private_key_len + 1, 1);
+    auto private_key_len = (uint64_t)BIO_pending(bio);
+    auto private_key = (char *)calloc(private_key_len + 1, 1);
 
     if (!private_key || (private_key_len == UINT64_MAX))
     {

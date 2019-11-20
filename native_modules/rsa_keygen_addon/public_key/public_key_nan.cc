@@ -18,7 +18,10 @@ void RSAPublicKeyExtractWorker::HandleOKCallback()
     HandleScope scope;
 
     auto promise = GetFromPersistent(1).As<Promise::Resolver>();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-result"
     promise->Resolve(GetCurrentContext(), New(this->public_key).ToLocalChecked());
+#pragma clang diagnostic pop
     v8::Isolate::GetCurrent()->RunMicrotasks();
 
     free(public_key);
@@ -29,7 +32,10 @@ void RSAPublicKeyExtractWorker::HandleErrorCallback()
     HandleScope scope;
 
     auto promise = GetFromPersistent(1).As<Promise::Resolver>();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-result"
     promise->Reject(GetCurrentContext(), New(this->ErrorMessage()).ToLocalChecked());
+#pragma clang diagnostic pop
     v8::Isolate::GetCurrent()->RunMicrotasks();
 
     free(public_key);
